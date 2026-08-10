@@ -539,8 +539,77 @@
   <div class="versus">v.</div>
   <div class="case-line">The Backlog</div>
   <p class="closing-sub">Book a paid diagnostic consultation. We'll tell you exactly what to automate first, and the fee comes off your build cost either way.</p>
-  <a href="#" class="btn">Book your consultation</a>
+
+  <div class="redline-card" style="max-width:420px;text-align:left;">
+    <div class="redline-label" id="slotLabel">Checking next available slot…</div>
+    <form id="bookingForm" style="margin-top:10px;">
+      <div style="display:grid;gap:12px;">
+        <input type="text" id="name_first" placeholder="First name" required
+          style="padding:10px 12px;border:1px solid var(--rule);background:#fff;font-family:'IBM Plex Sans';">
+        <input type="text" id="name_last" placeholder="Last name"
+          style="padding:10px 12px;border:1px solid var(--rule);background:#fff;font-family:'IBM Plex Sans';">
+        <input type="email" id="email_address" placeholder="Email address" required
+          style="padding:10px 12px;border:1px solid var(--rule);background:#fff;font-family:'IBM Plex Sans';">
+        <button type="submit" class="btn" id="bookBtn" style="border:none;cursor:pointer;">Pay &amp; book this slot</button>
+      </div>
+    </form>
+    <div class="redline-meta"><span id="formStatus"></span></div>
+  </div>
 </section>
+
+<script>
+  const slotLabel = document.getElementById('slotLabel');
+  const form = document.getElementById('bookingForm');
+  const bookBtn = document.getElementById('bookBtn');
+  const formStatus = document.getElementById('formStatus');
+
+  fetch('/.netlify/functions/check-availability')
+    .then(r => r.json())
+    .then(d => {
+      const dt = new Date(d.date + 'T00:00:00');
+      const formatted = dt.toLocaleDateString('en-ZA', { weekday: 'long', day: 'numeric', month: 'long' });
+      slotLabel.textContent = `Next available slot — ${formatted}, ${d.time}`;
+    })
+    .catch(() => { slotLabel.textContent = 'Book a consultation slot'; });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    bookBtn.disabled = true;
+    bookBtn.textContent = 'Redirecting to PayFast…';
+    formStatus.textContent = '';
+
+    try {
+      const res = await fetch('/.netlify/functions/create-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name_first: document.getElementById('name_first').value,
+          name_last: document.getElementById('name_last').value,
+          email_address: document.getElementById('email_address').value,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Something went wrong');
+
+      const payForm = document.createElement('form');
+      payForm.method = 'POST';
+      payForm.action = data.action;
+      Object.entries(data.fields).forEach(([k, v]) => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = k;
+        input.value = v;
+        payForm.appendChild(input);
+      });
+      document.body.appendChild(payForm);
+      payForm.submit();
+    } catch (err) {
+      formStatus.textContent = err.message;
+      bookBtn.disabled = false;
+      bookBtn.textContent = 'Pay & book this slot';
+    }
+  });
+</script>
 
 <footer>
   <div class="logo" style="font-size:1.1rem;">CASE<span>WORK</span></div>

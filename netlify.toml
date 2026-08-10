@@ -1,0 +1,13 @@
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+[[redirects]]
+  from = "/booking-confirmed"
+  to = "/index.html#booked"
+  status = 200
+
+[[redirects]]
+  from = "/booking-cancelled"
+  to = "/index.html#book"
+  status = 302
